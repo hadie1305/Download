@@ -1,0 +1,6 @@
+{
+  "name": "Ryujin Studio",
+  "description": "Minimalist dark-mode novel reader, Ryujin 900-chapter interactive saga, community hub, and exclusive single-creator studio with Drive sync, PDF/Excel reports, and real-time analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

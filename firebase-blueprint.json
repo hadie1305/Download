@@ -1,0 +1,217 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated reader or exclusive single creator profile and telemetry state",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID" },
+        "displayName": { "type": "string", "description": "Public display name" },
+        "email": { "type": "string", "description": "Private Google account email (PII)" },
+        "role": { "type": "string", "enum": ["reader", "creator"] },
+        "lastChapterRead": { "type": "integer", "description": "Latest Ryujin chapter number opened" },
+        "wordsRead": { "type": "integer", "description": "Total words read" },
+        "syncEnabled": { "type": "boolean" },
+        "driveLinked": { "type": "boolean" },
+        "driveFolderName": { "type": "string" },
+        "statusMessage": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "displayName", "email", "role", "lastChapterRead", "wordsRead", "syncEnabled", "driveLinked", "driveFolderName", "statusMessage", "createdAt", "updatedAt"]
+    },
+    "Novel": {
+      "title": "Novel",
+      "description": "Published or creator-authored novel metadata",
+      "type": "object",
+      "properties": {
+        "authorUid": { "type": "string" },
+        "title": { "type": "string" },
+        "authorName": { "type": "string" },
+        "genre": { "type": "string" },
+        "blurb": { "type": "string" },
+        "preface": { "type": "string" },
+        "totalChapters": { "type": "integer" },
+        "totalArcs": { "type": "integer" },
+        "wordsPerChapter": { "type": "integer" },
+        "isPublished": { "type": "boolean" },
+        "coverTag": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorUid", "title", "authorName", "genre", "blurb", "preface", "totalChapters", "totalArcs", "wordsPerChapter", "isPublished", "coverTag", "createdAt", "updatedAt"]
+    },
+    "ChapterSync": {
+      "title": "ChapterSync",
+      "description": "Creator-edited or newly published chapter synced to cloud",
+      "type": "object",
+      "properties": {
+        "novelId": { "type": "string" },
+        "chapterNumber": { "type": "integer" },
+        "arcNumber": { "type": "integer" },
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "wordCount": { "type": "integer" },
+        "contentPreview": { "type": "string" },
+        "editedByUid": { "type": "string" },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["novelId", "chapterNumber", "arcNumber", "title", "summary", "wordCount", "contentPreview", "editedByUid", "isPublished", "createdAt", "updatedAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "Reader or creator comment on a novel chapter",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "novelId": { "type": "string" },
+        "chapterNumber": { "type": "integer" },
+        "body": { "type": "string" },
+        "likesCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "authorName", "novelId", "chapterNumber", "body", "likesCount", "createdAt", "updatedAt"]
+    },
+    "CommunityGroup": {
+      "title": "CommunityGroup",
+      "description": "Reader discussion group",
+      "type": "object",
+      "properties": {
+        "creatorUid": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "genreTag": { "type": "string" },
+        "memberCount": { "type": "integer" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["creatorUid", "name", "description", "genreTag", "memberCount", "isActive", "createdAt", "updatedAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Real-time chat message in global lounge or group channel",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorRole": { "type": "string", "enum": ["reader", "creator"] },
+        "groupId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "authorName", "authorRole", "groupId", "text", "createdAt", "updatedAt"]
+    },
+    "StatusPost": {
+      "title": "StatusPost",
+      "description": "Community status update from readers and creator",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorRole": { "type": "string", "enum": ["reader", "creator"] },
+        "mood": { "type": "string" },
+        "content": { "type": "string" },
+        "likesCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "authorName", "authorRole", "mood", "content", "likesCount", "createdAt", "updatedAt"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "Real-time chapter update and activity notification",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "actorName": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "category": { "type": "string", "enum": ["chapter_update", "activity", "sync", "community"] },
+        "targetScope": { "type": "string", "enum": ["all", "creator", "user"] },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "actorName", "title", "message", "category", "targetScope", "isRead", "createdAt", "updatedAt"]
+    },
+    "DriveSyncLog": {
+      "title": "DriveSyncLog",
+      "description": "Creator-exclusive Google Drive & auto-sync audit record",
+      "type": "object",
+      "properties": {
+        "creatorUid": { "type": "string" },
+        "fileName": { "type": "string" },
+        "syncType": { "type": "string", "enum": ["auto_sync", "manual_drive", "pdf_export", "excel_export", "backup"] },
+        "destination": { "type": "string" },
+        "status": { "type": "string", "enum": ["synced", "pending", "failed"] },
+        "wordCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["creatorUid", "fileName", "syncType", "destination", "status", "wordCount", "createdAt", "updatedAt"]
+    },
+    "AppDistribution": {
+      "title": "AppDistribution",
+      "description": "Creator-managed app download and reader share links",
+      "type": "object",
+      "properties": {
+        "updatedByUid": { "type": "string" },
+        "sharedPreviewUrl": { "type": "string" },
+        "apkDownloadUrl": { "type": "string" },
+        "versionLabel": { "type": "string" },
+        "releaseNotes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["updatedByUid", "sharedPreviewUrl", "apkDownloadUrl", "versionLabel", "releaseNotes", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profiles with creator-only list access"
+    },
+    "/novels/{novelId}": {
+      "schema": { "$ref": "#/entities/Novel" },
+      "description": "Novels catalog managed exclusively by the developer creator"
+    },
+    "/novels/{novelId}/chapters/{chapterId}": {
+      "schema": { "$ref": "#/entities/ChapterSync" },
+      "description": "Synced chapter edits and newly published chapters"
+    },
+    "/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/Comment" },
+      "description": "Novel and chapter comments"
+    },
+    "/groups/{groupId}": {
+      "schema": { "$ref": "#/entities/CommunityGroup" },
+      "description": "Community reading groups"
+    },
+    "/chat_messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Real-time chat messages"
+    },
+    "/status_posts/{postId}": {
+      "schema": { "$ref": "#/entities/StatusPost" },
+      "description": "User and creator status updates"
+    },
+    "/notifications/{notifId}": {
+      "schema": { "$ref": "#/entities/AppNotification" },
+      "description": "Real-time notifications for chapter updates and instant activity monitoring"
+    },
+    "/drive_sync_logs/{logId}": {
+      "schema": { "$ref": "#/entities/DriveSyncLog" },
+      "description": "Exclusive creator Drive & auto-sync records"
+    },
+    "/app_distribution/{docId}": {
+      "schema": { "$ref": "#/entities/AppDistribution" },
+      "description": "Official APK download and shared app preview links"
+    }
+  }
+}

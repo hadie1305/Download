@@ -1,0 +1,416 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isCreator() {
+      return isSignedIn() && (
+        (request.auth.token.email_verified == true && request.auth.token.email == 'nioyuzi@gmail.com') ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+             data.role in ['reader', 'creator'] &&
+             data.lastChapterRead is int && data.lastChapterRead >= 1 && data.lastChapterRead <= 99999 &&
+             data.wordsRead is int && data.wordsRead >= 0 &&
+             data.syncEnabled is bool &&
+             data.driveLinked is bool &&
+             data.driveFolderName is string && data.driveFolderName.size() <= 160 &&
+             data.statusMessage is string && data.statusMessage.size() <= 240;
+    }
+
+    function isValidNovel(data) {
+      return data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 160 &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 100 &&
+             data.genre is string && data.genre.size() >= 1 && data.genre.size() <= 60 &&
+             data.blurb is string && data.blurb.size() >= 1 && data.blurb.size() <= 4000 &&
+             data.preface is string && data.preface.size() >= 1 && data.preface.size() <= 6000 &&
+             data.totalChapters is int && data.totalChapters >= 1 && data.totalChapters <= 50000 &&
+             data.totalArcs is int && data.totalArcs >= 1 && data.totalArcs <= 100 &&
+             data.wordsPerChapter is int && data.wordsPerChapter >= 100 && data.wordsPerChapter <= 500000 &&
+             data.isPublished is bool &&
+             data.coverTag is string && data.coverTag.size() >= 1 && data.coverTag.size() <= 60;
+    }
+
+    function isValidChapterSync(data) {
+      return data.novelId is string && data.novelId.size() >= 1 && data.novelId.size() <= 128 &&
+             data.chapterNumber is int && data.chapterNumber >= 1 && data.chapterNumber <= 50000 &&
+             data.arcNumber is int && data.arcNumber >= 1 && data.arcNumber <= 100 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.summary is string && data.summary.size() <= 1000 &&
+             data.wordCount is int && data.wordCount >= 0 &&
+             data.contentPreview is string && data.contentPreview.size() <= 25000 &&
+             data.editedByUid is string && data.editedByUid.size() >= 1 && data.editedByUid.size() <= 128 &&
+             data.isPublished is bool;
+    }
+
+    function isValidComment(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80 &&
+             data.novelId is string && data.novelId.size() >= 1 && data.novelId.size() <= 128 &&
+             data.chapterNumber is int && data.chapterNumber >= 0 && data.chapterNumber <= 50000 &&
+             data.body is string && data.body.size() >= 1 && data.body.size() <= 1000 &&
+             data.likesCount is int && data.likesCount >= 0;
+    }
+
+    function isValidGroup(data) {
+      return data.creatorUid is string && data.creatorUid.size() >= 1 && data.creatorUid.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             data.description is string && data.description.size() <= 300 &&
+             data.genreTag is string && data.genreTag.size() >= 1 && data.genreTag.size() <= 40 &&
+             data.memberCount is int && data.memberCount >= 1 &&
+             data.isActive is bool;
+    }
+
+    function isValidChatMessage(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80 &&
+             data.authorRole in ['reader', 'creator'] &&
+             data.groupId is string && data.groupId.size() >= 1 && data.groupId.size() <= 64 &&
+             data.text is string && data.text.size() >= 1 && data.text.size() <= 1000;
+    }
+
+    function isValidStatusPost(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80 &&
+             data.authorRole in ['reader', 'creator'] &&
+             data.mood is string && data.mood.size() >= 1 && data.mood.size() <= 40 &&
+             data.content is string && data.content.size() >= 1 && data.content.size() <= 500 &&
+             data.likesCount is int && data.likesCount >= 0;
+    }
+
+    function isValidNotification(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.actorName is string && data.actorName.size() >= 1 && data.actorName.size() <= 80 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+             data.message is string && data.message.size() >= 1 && data.message.size() <= 400 &&
+             data.category in ['chapter_update', 'activity', 'sync', 'community'] &&
+             data.targetScope in ['all', 'creator', 'user'] &&
+             data.isRead is bool;
+    }
+
+    function isValidDriveSyncLog(data) {
+      return data.creatorUid is string && data.creatorUid.size() >= 1 && data.creatorUid.size() <= 128 &&
+             data.fileName is string && data.fileName.size() >= 1 && data.fileName.size() <= 160 &&
+             data.syncType in ['auto_sync', 'manual_drive', 'pdf_export', 'excel_export', 'backup'] &&
+             data.destination is string && data.destination.size() >= 1 && data.destination.size() <= 200 &&
+             data.status in ['synced', 'pending', 'failed'] &&
+             data.wordCount is int && data.wordCount >= 0;
+    }
+
+    function isValidAppDistribution(data) {
+      return data.updatedByUid is string && data.updatedByUid.size() >= 1 && data.updatedByUid.size() <= 128 &&
+             data.sharedPreviewUrl is string && data.sharedPreviewUrl.size() <= 500 &&
+             data.apkDownloadUrl is string && data.apkDownloadUrl.size() <= 500 &&
+             data.versionLabel is string && data.versionLabel.size() >= 1 && data.versionLabel.size() <= 60 &&
+             data.releaseNotes is string && data.releaseNotes.size() <= 1000;
+    }
+
+    match /admins/{uid} {
+      allow get: if isSignedIn() && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isCreator());
+      allow list: if isCreator();
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       (incoming().role == 'reader' || isCreator()) &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'email', 'role', 'lastChapterRead', 'wordsRead', 'syncEnabled', 'driveLinked', 'driveFolderName', 'statusMessage', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'email', 'role', 'lastChapterRead', 'wordsRead', 'syncEnabled', 'driveLinked', 'driveFolderName', 'statusMessage', 'createdAt', 'updatedAt']) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       (
+                         (request.auth.uid == userId &&
+                          incoming().role == existing().role &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'lastChapterRead', 'wordsRead', 'syncEnabled', 'driveLinked', 'driveFolderName', 'statusMessage', 'updatedAt'])) ||
+                         (isCreator() &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'role', 'lastChapterRead', 'wordsRead', 'syncEnabled', 'driveLinked', 'driveFolderName', 'statusMessage', 'updatedAt']))
+                       );
+
+      allow delete: if isCreator() && isValidId(userId);
+    }
+
+    match /novels/{novelId} {
+      allow get: if isSignedIn() && isValidId(novelId) && (existing().isPublished == true || isCreator());
+      allow list: if isSignedIn() && (resource.data.isPublished == true || isCreator());
+
+      allow create: if isCreator() &&
+                       isValidId(novelId) &&
+                       incoming().authorUid == request.auth.uid &&
+                       incoming().keys().hasAll(['authorUid', 'title', 'authorName', 'genre', 'blurb', 'preface', 'totalChapters', 'totalArcs', 'wordsPerChapter', 'isPublished', 'coverTag', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['authorUid', 'title', 'authorName', 'genre', 'blurb', 'preface', 'totalChapters', 'totalArcs', 'wordsPerChapter', 'isPublished', 'coverTag', 'createdAt', 'updatedAt']) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidNovel(incoming());
+
+      allow update: if isCreator() &&
+                       isValidId(novelId) &&
+                       isValidNovel(incoming()) &&
+                       incoming().authorUid == existing().authorUid &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['title', 'authorName', 'genre', 'blurb', 'preface', 'totalChapters', 'totalArcs', 'wordsPerChapter', 'isPublished', 'coverTag', 'updatedAt']);
+
+      allow delete: if isCreator() && isValidId(novelId);
+
+      match /chapters/{chapterId} {
+        allow get: if isSignedIn() && isValidId(novelId) && isValidId(chapterId) && (existing().isPublished == true || isCreator());
+        allow list: if isSignedIn() && (resource.data.isPublished == true || isCreator());
+
+        allow create: if isCreator() &&
+                         isValidId(novelId) &&
+                         isValidId(chapterId) &&
+                         exists(/databases/$(database)/documents/novels/$(novelId)) &&
+                         incoming().novelId == novelId &&
+                         incoming().editedByUid == request.auth.uid &&
+                         incoming().keys().hasAll(['novelId', 'chapterNumber', 'arcNumber', 'title', 'summary', 'wordCount', 'contentPreview', 'editedByUid', 'isPublished', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['novelId', 'chapterNumber', 'arcNumber', 'title', 'summary', 'wordCount', 'contentPreview', 'editedByUid', 'isPublished', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         isValidChapterSync(incoming());
+
+        allow update: if isCreator() &&
+                         isValidId(novelId) &&
+                         isValidId(chapterId) &&
+                         isValidChapterSync(incoming()) &&
+                         incoming().novelId == existing().novelId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['chapterNumber', 'arcNumber', 'title', 'summary', 'wordCount', 'contentPreview', 'editedByUid', 'isPublished', 'updatedAt']);
+
+        allow delete: if isCreator() && isValidId(novelId) && isValidId(chapterId);
+      }
+    }
+
+    match /comments/{commentId} {
+      allow get: if isSignedIn() && isValidId(commentId);
+      allow list: if isSignedIn() && resource.data.novelId is string;
+
+      allow create: if isSignedIn() &&
+                       isValidId(commentId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().likesCount == 0 &&
+                       incoming().keys().hasAll(['userId', 'authorName', 'novelId', 'chapterNumber', 'body', 'likesCount', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'authorName', 'novelId', 'chapterNumber', 'body', 'likesCount', 'createdAt', 'updatedAt']) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidComment(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(commentId) &&
+                       isValidComment(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().novelId == existing().novelId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       (
+                         isCreator() ||
+                         (existing().userId == request.auth.uid &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['body', 'updatedAt'])) ||
+                         (incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'updatedAt']) &&
+                          incoming().likesCount == existing().likesCount + 1)
+                       );
+
+      allow delete: if isSignedIn() && isValidId(commentId) && (existing().userId == request.auth.uid || isCreator());
+    }
+
+    match /groups/{groupId} {
+      allow get: if isSignedIn() && isValidId(groupId) && (existing().isActive == true || isCreator());
+      allow list: if isSignedIn() && (resource.data.isActive == true || isCreator());
+
+      allow create: if isSignedIn() &&
+                       isValidId(groupId) &&
+                       incoming().creatorUid == request.auth.uid &&
+                       incoming().memberCount == 1 &&
+                       incoming().keys().hasAll(['creatorUid', 'name', 'description', 'genreTag', 'memberCount', 'isActive', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['creatorUid', 'name', 'description', 'genreTag', 'memberCount', 'isActive', 'createdAt', 'updatedAt']) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidGroup(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(groupId) &&
+                       isValidGroup(incoming()) &&
+                       incoming().creatorUid == existing().creatorUid &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       (
+                         isCreator() ||
+                         (existing().creatorUid == request.auth.uid &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'genreTag', 'isActive', 'updatedAt'])) ||
+                         (incoming().diff(existing()).affectedKeys().hasOnly(['memberCount', 'updatedAt']) &&
+                          incoming().memberCount == existing().memberCount + 1)
+                       );
+
+      allow delete: if isSignedIn() && isValidId(groupId) && (existing().creatorUid == request.auth.uid || isCreator());
+    }
+
+    match /chat_messages/{messageId} {
+      allow get: if isSignedIn() && isValidId(messageId);
+      allow list: if isSignedIn() && resource.data.groupId is string;
+
+      allow create: if isSignedIn() &&
+                       isValidId(messageId) &&
+                       incoming().userId == request.auth.uid &&
+                       (incoming().authorRole == 'reader' || isCreator()) &&
+                       incoming().keys().hasAll(['userId', 'authorName', 'authorRole', 'groupId', 'text', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'authorName', 'authorRole', 'groupId', 'text', 'createdAt', 'updatedAt']) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidChatMessage(incoming());
+
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidId(messageId) && (existing().userId == request.auth.uid || isCreator());
+    }
+
+    match /status_posts/{postId} {
+      allow get: if isSignedIn() && isValidId(postId);
+      allow list: if isSignedIn() && resource.data.userId is string;
+
+      allow create: if isSignedIn() &&
+                       isValidId(postId) &&
+                       incoming().userId == request.auth.uid &&
+                       (incoming().authorRole == 'reader' || isCreator()) &&
+                       incoming().likesCount == 0 &&
+                       incoming().keys().hasAll(['userId', 'authorName', 'authorRole', 'mood', 'content', 'likesCount', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'authorName', 'authorRole', 'mood', 'content', 'likesCount', 'createdAt', 'updatedAt']) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidStatusPost(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(postId) &&
+                       isValidStatusPost(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       (
+                         isCreator() ||
+                         (existing().userId == request.auth.uid &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['mood', 'content', 'updatedAt'])) ||
+                         (incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'updatedAt']) &&
+                          incoming().likesCount == existing().likesCount + 1)
+                       );
+
+      allow delete: if isSignedIn() && isValidId(postId) && (existing().userId == request.auth.uid || isCreator());
+    }
+
+    match /notifications/{notifId} {
+      allow get: if isSignedIn() && isValidId(notifId) && (isCreator() || existing().targetScope == 'all' || existing().userId == request.auth.uid);
+      allow list: if isCreator() || (isSignedIn() && (resource.data.targetScope == 'all' || resource.data.userId == request.auth.uid));
+
+      allow create: if isSignedIn() &&
+                       isValidId(notifId) &&
+                       incoming().userId == request.auth.uid &&
+                       (incoming().targetScope != 'all' || isCreator()) &&
+                       incoming().keys().hasAll(['userId', 'actorName', 'title', 'message', 'category', 'targetScope', 'isRead', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'actorName', 'title', 'message', 'category', 'targetScope', 'isRead', 'createdAt', 'updatedAt']) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidNotification(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(notifId) &&
+                       isValidNotification(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       (
+                         isCreator() ||
+                         (existing().userId == request.auth.uid &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['isRead', 'updatedAt']))
+                       );
+
+      allow delete: if isCreator() && isValidId(notifId);
+    }
+
+    match /drive_sync_logs/{logId} {
+      allow get, list: if isCreator();
+
+      allow create: if isCreator() &&
+                       isValidId(logId) &&
+                       incoming().creatorUid == request.auth.uid &&
+                       incoming().keys().hasAll(['creatorUid', 'fileName', 'syncType', 'destination', 'status', 'wordCount', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['creatorUid', 'fileName', 'syncType', 'destination', 'status', 'wordCount', 'createdAt', 'updatedAt']) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidDriveSyncLog(incoming());
+
+      allow update: if isCreator() &&
+                       isValidId(logId) &&
+                       isValidDriveSyncLog(incoming()) &&
+                       incoming().creatorUid == existing().creatorUid &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'destination', 'wordCount', 'updatedAt']);
+
+      allow delete: if isCreator() && isValidId(logId);
+    }
+
+    match /app_distribution/{docId} {
+      allow get: if isSignedIn() && isValidId(docId);
+      allow list: if isSignedIn();
+
+      allow create: if isCreator() &&
+                       isValidId(docId) &&
+                       incoming().updatedByUid == request.auth.uid &&
+                       incoming().keys().hasAll(['updatedByUid', 'sharedPreviewUrl', 'apkDownloadUrl', 'versionLabel', 'releaseNotes', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['updatedByUid', 'sharedPreviewUrl', 'apkDownloadUrl', 'versionLabel', 'releaseNotes', 'createdAt', 'updatedAt']) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       isValidAppDistribution(incoming());
+
+      allow update: if isCreator() &&
+                       isValidId(docId) &&
+                       isValidAppDistribution(incoming()) &&
+                       incoming().updatedByUid == request.auth.uid &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['updatedByUid', 'sharedPreviewUrl', 'apkDownloadUrl', 'versionLabel', 'releaseNotes', 'updatedAt']);
+
+      allow delete: if isCreator() && isValidId(docId);
+    }
+  }
+}
